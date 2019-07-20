@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Persons from './Persons'
 import PersonForm from './PersonForm'
 import Filter from './Filter'
-import axios from 'axios';
+import services from '../services/phonebookServices'
 
 const App = () => {
     const [ persons, setPersons] = useState([])
@@ -11,18 +11,35 @@ const App = () => {
     const [ filterTerm, setFilterTerm] = useState('')
 
     useEffect(() => {
-        axios
-            .get("http://localhost:3001/persons")
-            .then(response => {
-                setPersons(response.data)
-            })
+        services.getAll().then(data => setPersons(data))
     }, [])
 
     const addRecord = (event) => {
         event.preventDefault()
-        const names = persons.map(person => person.name)
-        if (names.indexOf(newName) !== -1) window.alert(`${newName} is already added to phonebook`)
-        else setPersons(persons.concat({ name: newName, number: newNumber}))
+        const names = persons.map(person => person.name.toLowerCase())
+        if (names.indexOf(newName.toLowerCase()) !== -1) {
+            const matchedPerson = persons.find(p => p.name === newName)
+            if (matchedPerson.number === newNumber) {
+                window.alert(`${newName} is already added to phonebook`)
+            } else if (window.confirm(`${matchedPerson.name} is already added to phonebook, replace the old number with a new one?`)) {
+                services.update({...matchedPerson, number: newNumber}).then(updatedPerson => setPersons(
+                        persons.map(p => p.id === updatedPerson.id ? updatedPerson : p)
+                    ))
+            }
+        } 
+        else {
+            services.create(
+                { name: newName, number: newNumber}
+            ).then(newPerson => setPersons(persons.concat(newPerson)))
+        }
+    }
+
+    const handleClick = (id) => {
+        if (window.confirm(`Delete ${persons.find(p => p.id === id).name}?`)) {
+            services.deleteEntry(id).then(r => {
+                r.status === 200 ? setPersons(persons.filter(p => p.id !== id)) : console.log(`Couldn't delete the resource with id ${id}`)
+            })
+        }
     }
 
     const filterContent = (event) => {
@@ -34,14 +51,14 @@ const App = () => {
 
     return (
         <div>
-        <h2>Phonebook</h2>
-        <Filter filterContent={filterContent} />
-        <h2>add a new</h2>
-        <PersonForm newName={newName} newNumber={newNumber} 
-                    handleNameChange={handleNameChange} handleNumberChange={handleNumberChange}
-                    addRecord={addRecord}/>
-        <h2>Numbers</h2>
-        <Persons persons={persons} filterTerm={filterTerm} />
+            <h2>Phonebook</h2>
+            <Filter filterContent={filterContent} />
+            <h2>add a new</h2>
+            <PersonForm newName={newName} newNumber={newNumber} 
+                        handleNameChange={handleNameChange} handleNumberChange={handleNumberChange}
+                        addRecord={addRecord}/>
+            <h2>Numbers</h2>
+            <Persons persons={persons} filterTerm={filterTerm} handleClick={handleClick}/>
         </div>
     )
 }
