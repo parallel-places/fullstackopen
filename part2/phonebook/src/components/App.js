@@ -49,7 +49,7 @@ const App = () => {
     const handleClick = (id) => {
         if (window.confirm(`Delete ${persons.find(p => p.id === id).name}?`)) {
             services.deleteEntry(id).then(r => {
-                if (r.status === 200) {
+                if (r.status === 204) {
                     setPersons(persons.filter(p => p.id !== id))
                     setMessage({text: `Deleted entry successfully`, type: 'success'})
                 } else {
